@@ -26,7 +26,7 @@ public:
         return bal;
     }
 
-    void show() const {
+    virtual void show() const {
         cout << "Balance: " << bal << endl;
     }
     Account& operator+=(double s) {
@@ -41,35 +41,113 @@ public:
     }
 
     Account operator+(double s) const {
-        Account temp(*this);
-        temp.bal += s;
-        return temp;
+        Account a(*this);
+        a.bal += s;
+        return a;
     }
 
     Account operator-(double s) const {
-        Account temp(*this);
-        if (s <= temp.bal) temp.bal -= s;
+        Account a(*this);
+        if (s <= a.bal) a.bal -= s;
         else cout << "Not enough money" << endl;
-        return temp;
+        return a;
+    }
+    Account& operator=(const Account& other) {
+        if (this != &other) {
+            bal = other.bal;
+        }
+        return *this;
+	}
+};
+
+class  CreditAccount : public Account {
+private:
+    int limit;
+public:
+    explicit CreditAccount(double b = 0.0, int l = 0) : Account(b), limit(l) {};
+    Account& operator-=(double s) {
+        if (s <= getBal() + limit) {
+            double nb = getBal() - s;
+            Account a(nb);
+            Account::operator=(a);
+        }
+        else cout << "Not enough money" << endl;
+        return *this;
     }
 };
+
+void menu(Account& acc, CreditAccount& crAcc) {
+    int choice;
+    double sum;
+
+    while (true) {
+        cout << "\n=====~~ONLINE~BANK~~=====\n";
+        cout << "1. Show balances\n";
+        cout << "2. Deposit to Account\n";
+        cout << "3. Withdraw from Account\n";
+        cout << "4. Deposit to CreditAccount\n";
+        cout << "5. Withdraw from CreditAccount\n";
+        cout << "6. Exit\n";
+        cout << "Choose: ";
+        cin >> choice;
+
+        switch (choice) {
+        case 1:
+            cout << "\n-=- Regular Account -=-\n";
+            acc.show();
+
+            cout << "\n-=- Credit Account -=-\n";
+            crAcc.show();
+            break;
+
+        case 2:
+            cout << "Enter amount to deposit: ";
+            cin >> sum;
+            acc += sum;
+            break;
+
+        case 3:
+            cout << "Enter amount to withdraw: ";
+            cin >> sum;
+            acc -= sum;
+            break;
+
+        case 4:
+            cout << "Enter amount to deposit: ";
+            cin >> sum;
+            crAcc += sum;
+            break;
+
+        case 5:
+            cout << "Enter amount to withdraw: ";
+            cin >> sum;
+            crAcc -= sum;
+            break;
+
+        case 6:
+            return;
+        default:
+            cout << "Error!" << endl;
+        }
+    }
+}
 int main()
 {
-    Account acc(100); 
-    acc.show();
+    /*CreditAccount cacc(100, 200);
 
-    acc += 20;
-    acc.show();
+    cacc.show();
 
-    acc -= 10;
-    acc.show();
+    cacc -= 50;
+    cacc.show();
 
-    Account acc2 = acc + 40;
-	acc2.show();
+    cacc -= 200;
+    cacc.show(); 
 
-    Account acc3 = acc - 15;
-    acc3.show();
+    cacc -= 200;   
+    cacc.show();*/   
 
-
+	Account acc(500);
+	CreditAccount crAcc(500, 300);
+	menu(acc, crAcc);
 }
 
