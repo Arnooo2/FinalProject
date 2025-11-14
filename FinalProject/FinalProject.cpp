@@ -22,15 +22,6 @@ public:
         bal = other.bal;
     }
 
-    void add(double s) {
-        bal += s;
-    }
-
-    void take(double s) {
-        if (s <= bal) bal -= s;
-        else cout << "Not enough money" << endl;
-    }
-
     double getBal() const {
         return bal;
     }
@@ -38,9 +29,47 @@ public:
     void show() const {
         cout << "Balance: " << bal << endl;
     }
+    Account& operator+=(double s) {
+        bal += s;
+        return *this;
+    }
+
+    Account& operator-=(double s) {
+        if (s <= bal) bal -= s;
+        else cout << "Not enough money" << endl;
+        return *this;
+    }
+
+    Account operator+(double s) const {
+        Account temp(*this);
+        temp.bal += s;
+        return temp;
+    }
+
+    Account operator-(double s) const {
+        Account temp(*this);
+        if (s <= temp.bal) temp.bal -= s;
+        else cout << "Not enough money" << endl;
+        return temp;
+    }
 };
 int main()
 {
-	//tyt pysto
+    Account acc(100); 
+    acc.show();
+
+    acc += 20;
+    acc.show();
+
+    acc -= 10;
+    acc.show();
+
+    Account acc2 = acc + 40;
+	acc2.show();
+
+    Account acc3 = acc - 15;
+    acc3.show();
+
+
 }
 
