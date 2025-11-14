@@ -1,13 +1,32 @@
 #include <iostream>
 #include <string>
+#include <vector>
+#include <fstream>
 
 using namespace std;
 
 struct Transaction {
     string type;
     double sum;
-    string date;
 };
+vector<Transaction> transactions;
+
+void addTransaction(const string& type, double sum) {
+    Transaction t{ type, sum };
+    transactions.push_back(t);
+}
+
+void saveTransactionsToFile(vector<Transaction> t) {
+    ofstream file("History.txt", ios::app);
+    file << "=== TRANSACTION HISTORY ===\n";
+    for(int i = 0; i < t.size(); i++) {
+        file << t[i].type << ": " << t[i].sum << "\n";
+	}
+    file << "===========================\n\n";
+    file.close();
+    cout << "History saved to file.\n";
+}
+
 
 class Account {
 private:
@@ -31,11 +50,15 @@ public:
     }
     Account& operator+=(double s) {
         bal += s;
+		addTransaction("Deposit", s);
         return *this;
     }
 
     Account& operator-=(double s) {
-        if (s <= bal) bal -= s;
+        if (s <= bal) {
+            bal -= s;
+			addTransaction("Withdraw", s);
+        }
         else cout << "Not enough money" << endl;
         return *this;
     }
@@ -125,6 +148,7 @@ void menu(Account& acc, CreditAccount& crAcc) {
             break;
 
         case 6:
+            saveTransactionsToFile(transactions);
             return;
         default:
             cout << "Error!" << endl;
