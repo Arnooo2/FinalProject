@@ -147,7 +147,7 @@ int main()
     cacc.show();*/   
 
 	Account acc(500);
-	CreditAccount crAcc(500, 300);
-	menu(acc, crAcc);
+	CreditAccount cacc(500, 300);
+	menu(acc, cacc);
 }
 
