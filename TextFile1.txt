@@ -1,6 +1,0 @@
-5
-book HarryPotter 1997 Rowling 410
-magazine Nature 2005 12
-newspaper Times 1960 12.05.1960
-book Dune 1965 Herbert 540
-magazine Science 1970 4
