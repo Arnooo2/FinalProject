@@ -2,6 +2,7 @@
 #include <string>
 #include <vector>
 #include <fstream>
+#include <mutex>   
 
 using namespace std;
 
@@ -11,21 +12,58 @@ struct Transaction {
 };
 vector<Transaction> transactions;
 
+
+mutex transactionsMutex;
+
+class BankException : public std::exception {
+private:
+    string msg;
+public:
+    explicit BankException(const string& m) : msg(m) {}
+    const char* what() const noexcept override {
+        return msg.c_str();
+    }
+};
+
+
 void addTransaction(const string& type, double sum) {
+    lock_guard<mutex> lock(transactionsMutex);
     Transaction t{ type, sum };
     transactions.push_back(t);
 }
 
 void saveTransactionsToFile(vector<Transaction> t) {
+    lock_guard<mutex> lock(transactionsMutex);
     ofstream file("History.txt", ios::app);
     file << "=== TRANSACTION HISTORY ===\n";
-    for(int i = 0; i < t.size(); i++) {
+    for (int i = 0; i < t.size(); i++) {
         file << t[i].type << ": " << t[i].sum << "\n";
-	}
+    }
     file << "===========================\n\n";
     file.close();
     cout << "History saved to file.\n";
 }
+
+void printTransactionsTable(const vector<Transaction>& t)
+{
+    lock_guard<mutex> lock(transactionsMutex);
+    cout << "\n================ TRANSACTION TABLE ================\n";
+    cout << "|     TYPE        |        SUM                    |\n";
+    cout << "---------------------------------------------------\n";
+
+    for (int i = 0; i < t.size(); i++)
+    {
+        cout << "| " << t[i].type;
+
+        int spaces = 15 - t[i].type.size();
+        for (int s = 0; s < spaces; s++) cout << " ";
+
+        cout << "| " << t[i].sum << "\n";
+    }
+
+    cout << "===================================================\n\n";
+}
+
 
 
 class Account {
@@ -50,14 +88,14 @@ public:
     }
     Account& operator+=(double s) {
         bal += s;
-		addTransaction("Deposit", s);
+        addTransaction("Deposit", s);
         return *this;
     }
 
     Account& operator-=(double s) {
         if (s <= bal) {
             bal -= s;
-			addTransaction("Withdraw", s);
+            addTransaction("Withdraw", s);
         }
         else cout << "Not enough money" << endl;
         return *this;
@@ -80,7 +118,7 @@ public:
             bal = other.bal;
         }
         return *this;
-	}
+    }
 };
 
 class  CreditAccount : public Account {
@@ -104,57 +142,81 @@ void menu(Account& acc, CreditAccount& crAcc) {
     double sum;
 
     while (true) {
-        cout << "\n=====~~ONLINE~BANK~~=====\n";
-        cout << "1. Show balances\n";
-        cout << "2. Deposit to Account\n";
-        cout << "3. Withdraw from Account\n";
-        cout << "4. Deposit to CreditAccount\n";
-        cout << "5. Withdraw from CreditAccount\n";
-        cout << "6. Exit\n";
-        cout << "Choose: ";
-        cin >> choice;
+        try {
+            cout << "\n=====~~ONLINE~BANK~~=====\n";
+            cout << "1. Show balances\n";
+            cout << "2. Deposit to Account\n";
+            cout << "3. Withdraw from Account\n";
+            cout << "4. Deposit to CreditAccount\n";
+            cout << "5. Withdraw from CreditAccount\n";
+            cout << "6. Exit\n";
+            cout << "7. Show transaction table\n";
+            cout << "Choose: ";
 
-        switch (choice) {
-        case 1:
-            cout << "\n-=- Regular Account -=-\n";
-            acc.show();
+            if (!(cin >> choice))
+                throw BankException("Invalid menu input!");
 
-            cout << "\n-=- Credit Account -=-\n";
-            crAcc.show();
-            break;
+            switch (choice) {
+            case 7:
+                printTransactionsTable(transactions);
+                break;
 
-        case 2:
-            cout << "Enter amount to deposit: ";
-            cin >> sum;
-            acc += sum;
-            break;
+            case 1:
+                acc.show();
+                crAcc.show();
+                break;
 
-        case 3:
-            cout << "Enter amount to withdraw: ";
-            cin >> sum;
-            acc -= sum;
-            break;
+            case 2:
+                cout << "Enter amount to deposit: ";
+                if (!(cin >> sum) || sum <= 0)
+                    throw BankException("Incorrect deposit value!");
+                acc += sum;
+                break;
 
-        case 4:
-            cout << "Enter amount to deposit: ";
-            cin >> sum;
-            crAcc += sum;
-            break;
+            case 3:
+                cout << "Enter amount to withdraw: ";
+                if (!(cin >> sum) || sum <= 0)
+                    throw BankException("Incorrect withdraw value!");
+                if (sum > acc.getBal())
+                    throw BankException("Not enough money on Account!");
+                acc -= sum;
+                break;
 
-        case 5:
-            cout << "Enter amount to withdraw: ";
-            cin >> sum;
-            crAcc -= sum;
-            break;
+            case 4:
+                cout << "Enter amount to deposit: ";
+                if (!(cin >> sum) || sum <= 0)
+                    throw BankException("Incorrect deposit value!");
+                crAcc += sum;
+                break;
 
-        case 6:
-            saveTransactionsToFile(transactions);
-            return;
-        default:
-            cout << "Error!" << endl;
+            case 5:
+                cout << "Enter amount to withdraw: ";
+                if (!(cin >> sum) || sum <= 0)
+                    throw BankException("Incorrect withdraw value!");
+                if (sum > crAcc.getBal() + 300)
+                    throw BankException("Credit limit exceeded!");
+                crAcc -= sum;
+                break;
+
+            case 6:
+                saveTransactionsToFile(transactions);
+                return;
+
+            default:
+                throw BankException("Invalid menu option!");
+            }
+        }
+        catch (BankException& e) {
+            cout << "[ERROR] " << e.what() << "\n";
+            cin.clear();
+            cin.ignore(10000, '\n');
         }
     }
 }
+
+void printTransactionsTable(const vector<Transaction>& t);
+
+
 int main()
 {
     /*CreditAccount cacc(100, 200);
@@ -165,13 +227,12 @@ int main()
     cacc.show();
 
     cacc -= 200;
-    cacc.show(); 
+    cacc.show();
 
-    cacc -= 200;   
-    cacc.show();*/   
+    cacc -= 200;
+    cacc.show();*/
 
-	Account acc(500);
-	CreditAccount cacc(500, 300);
-	menu(acc, cacc);
+    Account acc(500);
+    CreditAccount cacc(500, 300);
+    menu(acc, cacc);
 }
-
